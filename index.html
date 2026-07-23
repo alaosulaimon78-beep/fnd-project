@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detection System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: #b0b0b0;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            border: none;
+            background: #16213e;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 1em;
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button:hover {
+            background: #0f3460;
+            border-bottom-color: #00d4ff;
+        }
+
+        .tab-button.active {
+            background: #0f3460;
+            border-bottom-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .card {
+            background: #16213e;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #00d4ff;
+        }
+
+        .model-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .model-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .stat:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #b0b0b0;
+        }
+
+        .stat-value {
+            color: #00d4ff;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .prediction-section {
+            margin-bottom: 30px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #333;
+            background: #0f3460;
+            color: #e0e0e0;
+            border-radius: 5px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            background: #0f3460;
+            border-left: 4px solid #00d4ff;
+        }
+
+        .result.fake {
+            border-left-color: #ff6b6b;
+        }
+
+        .result.real {
+            border-left-color: #51cf66;
+        }
+
+        .result-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .confidence {
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+
+        .confidence.high {
+            color: #51cf66;
+        }
+
+        .confidence.medium {
+            color: #ffd43b;
+        }
+
+        .confidence.low {
+            color: #ff6b6b;
+        }
+
+        .probability-bars {
+            margin-top: 15px;
+        }
+
+        .prob-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .prob-label {
+            width: 80px;
+            color: #b0b0b0;
+        }
+
+        .prob-bar {
+            flex: 1;
+            height: 25px;
+            background: #16213e;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+
+        .prob-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff 0%, #7b2cbf 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+        }
+
+        .prob-value {
+            min-width: 50px;
+            text-align: right;
+            color: #00d4ff;
+        }
+
+        .plots-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .plots-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .plot-container {
+            background: #16213e;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .plot-container img {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 5px;
+        }
+
+        .plot-title {
+            margin-bottom: 15px;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #b0b0b0;
+        }
+
+        .spinner {
+            border: 4px solid #333;
+            border-top: 4px solid #00d4ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #51cf66;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .comparison-full-width {
+            grid-column: 1 / -1;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Fake News Detection System</h1>
+            <p class="subtitle">Comparing Baseline RF vs PSO+RF Models</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="home">Home</button>
+            <button class="tab-button" data-tab="baseline">Baseline RF</button>
+            <button class="tab-button" data-tab="pso">PSO+RF</button>
+            <button class="tab-button" data-tab="evaluation">Evaluation</button>
+        </div>
+
+        <!-- HOME TAB -->
+        <div id="home" class="tab-content active">
+            <div class="card">
+                <h2>📊 Project Overview</h2>
+                <p style="margin-top: 15px; line-height: 1.6; color: #b0b0b0;">
+                    This system compares two fake news detection approaches:
+                    <br><br>
+                    <strong style="color: #00d4ff;">Baseline Model:</strong> Random Forest with TF-IDF (300 features)<br>
+                    <strong style="color: #7b2cbf;">Proposed Model:</strong> Binary PSO for feature selection + Random Forest (96 features, 52% reduction)<br>
+                    <br>
+                    The goal is to achieve competitive accuracy while reducing feature dimensionality through intelligent feature selection.
+                </p>
+            </div>
+
+            <div class="model-cards" id="statsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading model statistics...
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📁 Dataset Information</h2>
+                <div class="stat">
+                    <span class="stat-label">Dataset Source:</span>
+                    <span class="stat-value">ISOT Fake News Dataset</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Real News Source:</span>
+                    <span class="stat-value">Reuters</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Total Articles:</span>
+                    <span class="stat-value">~44,898</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Training Samples:</span>
+                    <span class="stat-value">~5,000 (80/20 split)</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Text Features:</span>
+                    <span class="stat-value">Title + Text Combined</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BASELINE TAB -->
+        <div id="baseline" class="tab-content">
+            <div class="card">
+                <h2>Baseline Random Forest Model</h2>
+                <p style="margin-top: 10px; color: #b0b0b0;">
+                    TF-IDF Vectorization (300 features) → Random Forest (30 trees, depth 8)
+                </p>
+            </div>
+
+            <div class="card prediction-section">
+                <h3 style="margin-bottom: 15px;">Predict with Baseline Model</h3>
+                <textarea id="baselineInput" placeholder="Enter news article text here..."></textarea>
+                <div class="button-group">
+                    <button onclick="predictBaseline()">Predict</button>
+                    <button onclick="clearBaseline()" style="background: #555;">Clear</button>
+                </div>
+                <div id="baselineResult"></div>
+            </div>
+        </div>
+
+        <!-- PSO TAB -->
+        <div id="pso" class="tab-content">
+            <div class="card">
+                <h2>PSO+RF Model (Proposed)</h2>
+                <p style="margin-top: 10px; color: #b0b0b0;">
+                    TF-IDF Vectorization (300 features) → Binary PSO (20 iterations, 15 particles) → Random Forest (500 trees, unlimited depth)
+                </p>
+            </div>
+
+            <div class="card prediction-section">
+                <h3 style="margin-bottom: 15px;">Predict with PSO+RF Model</h3>
+                <textarea id="psoInput" placeholder="Enter news article text here..."></textarea>
+                <div class="button-group">
+                    <button onclick="predictPSO()">Predict</button>
+                    <button onclick="clearPSO()" style="background: #555;">Clear</button>
+                </div>
+                <div id="psoResult"></div>
+            </div>
+        </div>
+
+        <!-- EVALUATION TAB -->
+        <div id="evaluation" class="tab-content">
+            <div class="card">
+                <h2>📈 Model Evaluation & Comparison</h2>
+                <p style="margin-top: 10px; color: #b0b0b0;">
+                    Comprehensive evaluation metrics and visualizations for both models
+                </p>
+            </div>
+
+            <div id="plotsContainer" class="plots-grid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Generating evaluation plots...
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Kwara State University, Faculty of Information and Communication Technology</p>
+        </footer>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tab = button.dataset.tab;
+                
+                // Remove active class from all buttons and contents
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(tab).classList.add('active');
+
+                // Load plots when evaluation tab is clicked
+                if (tab === 'evaluation') {
+                    loadPlots();
+                }
+            });
+        });
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/api/stats`);
+                const data = await response.json();
+
+                const html = `
+                    <div class="card">
+                        <h3 style="margin-bottom: 15px; color: #00d4ff;">Baseline Random Forest</h3>
+                        <div class="stat">
+                            <span class="stat-label">Accuracy:</span>
+                            <span class="stat-value">${(data.baseline.accuracy * 100).toFixed(2)}%</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">AUC-ROC:</span>
+                            <span class="stat-value">${data.baseline.auc.toFixed(4)}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Features:</span>
+                            <span class="stat-value">${data.baseline.features}</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin-bottom: 15px; color: #7b2cbf;">PSO+RF Model</h3>
+                        <div class="stat">
+                            <span class="stat-label">Accuracy:</span>
+                            <span class="stat-value">${(data.pso.accuracy * 100).toFixed(2)}%</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">AUC-ROC:</span>
+                            <span class="stat-value">${data.pso.auc.toFixed(4)}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Features:</span>
+                            <span class="stat-value">${data.pso.features}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Feature Reduction:</span>
+                            <span class="stat-value">52%</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('statsContainer').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('statsContainer').innerHTML = `<div class="error">Error loading statistics</div>`;
+            }
+        }
+
+        // Load plots
+        async function loadPlots() {
+            try {
+                const response = await fetch(`${API_URL}/api/plots`);
+                const plots = await response.json();
+
+                const html = `
+                    <div class="plot-container">
+                        <div class="plot-title">Confusion Matrix - Baseline</div>
+                        <img src="${plots.cm_baseline}" alt="Baseline Confusion Matrix">
+                    </div>
+                    <div class="plot-container">
+                        <div class="plot-title">Confusion Matrix - PSO+RF</div>
+                        <img src="${plots.cm_pso}" alt="PSO Confusion Matrix">
+                    </div>
+                    <div class="plot-container">
+                        <div class="plot-title">ROC Curve - Baseline</div>
+                        <img src="${plots.roc_baseline}" alt="Baseline ROC">
+                    </div>
+                    <div class="plot-container">
+                        <div class="plot-title">ROC Curve - PSO+RF</div>
+                        <img src="${plots.roc_pso}" alt="PSO ROC">
+                    </div>
+                    <div class="plot-container">
+                        <div class="plot-title">Top 20 Features - Baseline</div>
+                        <img src="${plots.feature_imp_baseline}" alt="Baseline Features">
+                    </div>
+                    <div class="plot-container">
+                        <div class="plot-title">Top 20 Features - PSO+RF</div>
+                        <img src="${plots.feature_imp_pso}" alt="PSO Features">
+                    </div>
+                    <div class="plot-container comparison-full-width">
+                        <div class="plot-title">Metrics Comparison</div>
+                        <img src="${plots.metrics_comparison}" alt="Metrics Comparison">
+                    </div>
+                `;
+                document.getElementById('plotsContainer').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading plots:', error);
+                document.getElementById('plotsContainer').innerHTML = `<div class="error">Error loading plots</div>`;
+            }
+        }
+
+        // Prediction functions
+        async function predictBaseline() {
+            const text = document.getElementById('baselineInput').value.trim();
+            if (!text) {
+                showError('baselineResult', 'Please enter text to analyze');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await response.json();
+                displayResult('baselineResult', data.baseline);
+            } catch (error) {
+                console.error('Prediction error:', error);
+                showError('baselineResult', 'Error making prediction');
+            }
+        }
+
+        async function predictPSO() {
+            const text = document.getElementById('psoInput').value.trim();
+            if (!text) {
+                showError('psoResult', 'Please enter text to analyze');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await response.json();
+                displayResult('psoResult', data.pso);
+            } catch (error) {
+                console.error('Prediction error:', error);
+                showError('psoResult', 'Error making prediction');
+            }
+        }
+
+        function displayResult(elementId, result) {
+            const isFake = result.prediction === 'Fake';
+            const resultClass = isFake ? 'fake' : 'real';
+            const confidenceClass = result.confidence > 90 ? 'high' : result.confidence > 70 ? 'medium' : 'low';
+
+            const html = `
+                <div class="result ${resultClass}">
+                    <div class="result-title">
+                        🔍 Prediction: <span style="color: ${isFake ? '#ff6b6b' : '#51cf66'}">${result.prediction}</span>
+                    </div>
+                    <div class="confidence ${confidenceClass}">
+                        Confidence: ${result.confidence}%
+                    </div>
+                    <div class="probability-bars">
+                        <div class="prob-item">
+                            <div class="prob-label">Fake</div>
+                            <div class="prob-bar">
+                                <div class="prob-fill" style="width: ${result.fake_prob}%"></div>
+                            </div>
+                            <div class="prob-value">${result.fake_prob}%</div>
+                        </div>
+                        <div class="prob-item">
+                            <div class="prob-label">Real</div>
+                            <div class="prob-bar">
+                                <div class="prob-fill" style="width: ${result.real_prob}%"></div>
+                            </div>
+                            <div class="prob-value">${result.real_prob}%</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        function showError(elementId, message) {
+            document.getElementById(elementId).innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function clearBaseline() {
+            document.getElementById('baselineInput').value = '';
+            document.getElementById('baselineResult').innerHTML = '';
+        }
+
+        function clearPSO() {
+            document.getElementById('psoInput').value = '';
+            document.getElementById('psoResult').innerHTML = '';
+        }
+
+        // Load stats on page load
+        loadStats();
+    </script>
+</body>
+</html>
