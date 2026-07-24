@@ -28,8 +28,8 @@ print("Loading datasets...")
 fake_df = pd.read_csv(f'{DATA_PATH}\\fake.csv')
 true_df = pd.read_csv(f'{DATA_PATH}\\true.csv')
 
-fake_df['label'] = 1  # Fake = 1
-true_df['label'] = 0  # Real = 0
+fake_df['label'] = 0  # Fake = 0
+true_df['label'] = 1  # Real = 1
 df = pd.concat([fake_df, true_df], ignore_index=True).sample(frac=1).reset_index(drop=True)
 
 # Combine title + text
@@ -207,7 +207,7 @@ def get_plots():
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
-    """Make prediction on user input"""
+    """Make prediction on user input with confidence thresholds"""
     data = request.json
     text = data.get('text', '')
     
@@ -217,27 +217,65 @@ def predict():
     # Vectorize
     X_test = vectorizer.transform([text])
     
-    # Predict with baseline
+    # ===== BASELINE MODEL =====
     pred_baseline = rf_baseline.predict(X_test)[0]
     proba_baseline = rf_baseline.predict_proba(X_test)[0]
+    confidence_baseline = max(proba_baseline) * 100
     
-    # Predict with PSO (selected features only)
+    # Determine prediction with confidence threshold
+    if confidence_baseline < 60:
+        prediction_baseline = "UNCERTAIN"
+        status_baseline = "⚠️ Low Confidence"
+        message_baseline = "The model is uncertain about this prediction. Please review manually or provide more context."
+    else:
+        prediction_baseline = 'Real' if pred_baseline == 1 else 'Fake'
+        status_baseline = "✅ Confident" if confidence_baseline > 75 else "⚠️ Moderate Confidence"
+        message_baseline = ""
+    
+    # ===== PSO MODEL =====
     X_test_pso = X_test[:, selected_features]
     pred_pso = rf_pso.predict(X_test_pso)[0]
     proba_pso = rf_pso.predict_proba(X_test_pso)[0]
+    confidence_pso = max(proba_pso) * 100
+    
+    # Determine prediction with confidence threshold
+    if confidence_pso < 60:
+        prediction_pso = "UNCERTAIN"
+        status_pso = "⚠️ Low Confidence"
+        message_pso = "The model is uncertain about this prediction. Please review manually or provide more context."
+    else:
+        prediction_pso = 'Real' if pred_pso == 1 else 'Fake'
+        status_pso = "✅ Confident" if confidence_pso > 75 else "⚠️ Moderate Confidence"
+        message_pso = ""
     
     return jsonify({
         'baseline': {
-            'prediction': 'Real' if pred_baseline == 1 else 'Fake',
-            'confidence': round(max(proba_baseline) * 100, 2),
+            'prediction': prediction_baseline,
+            'confidence': round(confidence_baseline, 2),
+            'status': status_baseline,
+            'message': message_baseline,
             'fake_prob': round(proba_baseline[0] * 100, 2),
             'real_prob': round(proba_baseline[1] * 100, 2)
         },
         'pso': {
-            'prediction': 'Real' if pred_pso == 1 else 'Fake',
-            'confidence': round(max(proba_pso) * 100, 2),
+            'prediction': prediction_pso,
+            'confidence': round(confidence_pso, 2),
+            'status': status_pso,
+            'message': message_pso,
             'fake_prob': round(proba_pso[0] * 100, 2),
             'real_prob': round(proba_pso[1] * 100, 2)
+        },
+        'disclaimer': {
+            'title': '⚠️ Model Limitations',
+            'description': 'This model was trained on formal news articles from 2016-2018 (Reuters, AP, etc.) and may not work well on:',
+            'limitations': [
+                '❌ Social media posts, tweets, or informal text',
+                '❌ Modern news from 2024-2026 (may have different writing styles)',
+                '❌ News from non-English sources or translations',
+                '❌ Highly opinionated or satirical content',
+                '❌ Visual misinformation or deepfakes'
+            ],
+            'recommendation': 'Use this tool as a first pass only. Always verify with fact-checking websites like Snopes, FactCheck.org, or PolitiFact for important decisions.'
         }
     })
 
