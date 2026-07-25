@@ -1,6 +1,8 @@
 import warnings
 warnings.filterwarnings('ignore')
 
+import os
+
 import matplotlib
 matplotlib.use('Agg')
 
@@ -14,19 +16,19 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import io
 import base64
-from PIL import Image
 
 app = Flask(__name__)
 CORS(app)
 
-# Paths
-DATA_PATH = r'C:\Users\USER\fake_news_project\data'
-MODELS_PATH = r'C:\Users\USER\fake_news_project\models'
+# Paths — relative to this file, so it works both locally and on Render
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, 'data')
+MODELS_PATH = os.path.join(BASE_DIR, 'models')
 
 # Load data
 print("Loading datasets...")
-fake_df = pd.read_csv(f'{DATA_PATH}\\fake.csv')
-true_df = pd.read_csv(f'{DATA_PATH}\\true.csv')
+fake_df = pd.read_csv(os.path.join(DATA_PATH, 'fake.csv'))
+true_df = pd.read_csv(os.path.join(DATA_PATH, 'true.csv'))
 
 fake_df['label'] = 0  # Fake = 0
 true_df['label'] = 1  # Real = 1
@@ -39,13 +41,13 @@ print(f"Dataset loaded: {len(df)} articles")
 
 # Load models
 print("Loading models...")
-with open(f'{MODELS_PATH}\\rf_baseline.pkl', 'rb') as f:
+with open(os.path.join(MODELS_PATH, 'rf_baseline.pkl'), 'rb') as f:
     rf_baseline = pickle.load(f)
-with open(f'{MODELS_PATH}\\rf_pso.pkl', 'rb') as f:
+with open(os.path.join(MODELS_PATH, 'rf_pso.pkl'), 'rb') as f:
     rf_pso = pickle.load(f)
-with open(f'{MODELS_PATH}\\tfidf.pkl', 'rb') as f:
+with open(os.path.join(MODELS_PATH, 'tfidf.pkl'), 'rb') as f:
     vectorizer = pickle.load(f)
-with open(f'{MODELS_PATH}\\selected_features.pkl', 'rb') as f:
+with open(os.path.join(MODELS_PATH, 'selected_features.pkl'), 'rb') as f:
     selected_features = pickle.load(f)
 
 print("✅ All models loaded!")
@@ -130,17 +132,17 @@ def get_metrics_comparison_plot():
     """Generate metrics comparison plot"""
     acc_baseline = accuracy_score(evaluation_data['y'], evaluation_data['y_pred_baseline'])
     acc_pso = accuracy_score(evaluation_data['y'], evaluation_data['y_pred_pso'])
-    
+
     fpr_b, tpr_b, _ = roc_curve(evaluation_data['y'], evaluation_data['y_proba_baseline'])
     auc_b = auc(fpr_b, tpr_b)
-    
+
     fpr_p, tpr_p, _ = roc_curve(evaluation_data['y'], evaluation_data['y_proba_pso'])
     auc_p = auc(fpr_p, tpr_p)
-    
+
     metrics = ['Accuracy', 'AUC']
     baseline_scores = [acc_baseline, auc_b]
     pso_scores = [acc_pso, auc_p]
-    
+
     fig, ax = plt.subplots(figsize=(8, 6))
     x = np.arange(len(metrics))
     width = 0.35
@@ -210,18 +212,18 @@ def predict():
     """Make prediction on user input with confidence thresholds"""
     data = request.json
     text = data.get('text', '')
-    
+
     if not text:
         return jsonify({'error': 'No text provided'}), 400
-    
+
     # Vectorize
     X_test = vectorizer.transform([text])
-    
+
     # ===== BASELINE MODEL =====
     pred_baseline = rf_baseline.predict(X_test)[0]
     proba_baseline = rf_baseline.predict_proba(X_test)[0]
     confidence_baseline = max(proba_baseline) * 100
-    
+
     # Determine prediction with confidence threshold
     if confidence_baseline < 60:
         prediction_baseline = "UNCERTAIN"
@@ -231,13 +233,13 @@ def predict():
         prediction_baseline = 'Real' if pred_baseline == 1 else 'Fake'
         status_baseline = "✅ Confident" if confidence_baseline > 75 else "⚠️ Moderate Confidence"
         message_baseline = ""
-    
+
     # ===== PSO MODEL =====
     X_test_pso = X_test[:, selected_features]
     pred_pso = rf_pso.predict(X_test_pso)[0]
     proba_pso = rf_pso.predict_proba(X_test_pso)[0]
     confidence_pso = max(proba_pso) * 100
-    
+
     # Determine prediction with confidence threshold
     if confidence_pso < 60:
         prediction_pso = "UNCERTAIN"
@@ -247,7 +249,7 @@ def predict():
         prediction_pso = 'Real' if pred_pso == 1 else 'Fake'
         status_pso = "✅ Confident" if confidence_pso > 75 else "⚠️ Moderate Confidence"
         message_pso = ""
-    
+
     return jsonify({
         'baseline': {
             'prediction': prediction_baseline,
@@ -283,17 +285,18 @@ def predict():
 def home():
     """Serve frontend"""
     try:
-        with open('index.html', 'r', encoding='utf-8') as f:
+        index_path = os.path.join(BASE_DIR, 'index.html')
+        with open(index_path, 'r', encoding='utf-8') as f:
             return f.read()
     except Exception as e:
         return f"<h1>Error loading page: {str(e)}</h1>", 500
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     print("\n" + "="*70)
     print("✅ FLASK SERVER RUNNING")
     print("="*70)
-    print("\n🌐 Open your browser and go to:")
-    print("   http://localhost:5000")
+    print(f"\n🌐 Listening on port {port}")
     print("\n📊 Features:")
     print("   - Home: Project overview & statistics")
     print("   - Baseline RF: Predictions with baseline model")
@@ -301,4 +304,4 @@ if __name__ == '__main__':
     print("   - Evaluation: All plots and metrics")
     print("\n⚠️  Press Ctrl+C to stop the server")
     print("="*70 + "\n")
-    app.run(debug=False, port=5000)
+    app.run(debug=False, host='0.0.0.0', port=port)
